@@ -1,5 +1,7 @@
+import socket
 import threading
 import time
+from urllib.parse import unquote
 import requests
 import os
 from dotenv import load_dotenv
@@ -8,6 +10,8 @@ import sqlite3
 load_dotenv()
 appID = os.getenv("APPID")
 appsecret = os.getenv("APPSECRET")
+template_id = os.getenv("TEMPLATE_ID")
+http_coding = "utf-8"
 
 
 def init():
@@ -42,10 +46,11 @@ def update_access_token():
                            (rjson["access_token"], int(time.time()), rjson["expires_in"]))
             cursor.close()
             sqlite_con.commit()
-    print("完成更新数据库")
+            print("完成数据库更新")
+    print("完成检查数据库")
 
 
-def push():
+def push(from_, to, content):
     sqlite_con = sqlite3.connect("data.db")
     cursor = sqlite_con.cursor()
     cursor.execute("select content from access_token")
@@ -53,16 +58,68 @@ def push():
     access_token = result[0]
     # print(access_token)
     url = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=%s" % access_token
-    requests_body = {'touser': '',
-                     'template_id': '',
-                     'url': 'https://www.zhlh6.com', 'topcolor': '#FF0000',
-                     'data': {"from": {"value": "Z&L", "color": "#000000"},
-                              "content": {"value": "helloworld!?!", "color": "#003366"}}}
+    requests_body = {'touser': to,
+                     'template_id': template_id,
+                     'url': 'https://www.zhlh6.cn', 'topcolor': '#FF0000',
+                     'data': {"from": {"value": from_, "color": "#000000"},
+                              "content": {"value": content, "color": "#003366"}}}
     r = requests.post(url=url, json=requests_body)
-    print(r.content)
+    return r.content
+
+
+def abort(conn, code):
+    if code == 501:
+        msg = "HTTP/1.0 501 Method Not Implemented\r\nContent-Type: text/html\r\n\r\n<HTML><HEAD><TITLE>Method Not Implemented</TITLE></HEAD>\r\n<BODY><P>HTTP request method not supported.</P>\r\n</BODY></HTML>\r\n"
+        conn.sendall(msg.encode(http_coding))
+        conn.close()
+
+
+def return_msg(conn, content):
+    msg = "HTTP/1.1 200 OK\r\n"
+    msg += "Content-Type: text/html\r\n\r\n"
+    msg += content
+    conn.sendall(msg.encode(http_coding))
+    conn.close()
+
+
+def process_http(conn):
+    receive_data = conn.recv(3000)  # GET方法只收2k+字节
+    request = receive_data.decode(http_coding)
+    try:
+        method = request.split(" ")[0]
+        args = request.split(" ")[1]
+        print(method)
+        print(args)
+    except:
+        abort(500)
+        return
+    if method != "GET":
+        abort(conn, 501)
+        return
+
+    args_dict = dict()
+    args = args[args.find("?") + 1:]  # 分离出?后面的参数
+    for arg in args.split("&"):
+        kv = arg.split("=")
+        args_dict[kv[0]] = kv[1]
+    from_ = unquote(args_dict.get("from"), http_coding)
+    to = unquote(args_dict.get("to"), http_coding)
+    content = unquote(args_dict.get("content"), http_coding)
+    if from_ and to and content:
+        return_msg(conn, push(from_, to, content).decode("utf-8"))
+    else:
+        return_msg(conn, "Parameter error!")
 
 
 if __name__ == "__main__":
     init()
-    push()
     # TODO:提供外部接口调用
+    sk = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+    sk.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sk.bind(("0.0.0.0", 1025))
+    sk.listen()
+    while True:
+        conn, address = sk.accept()
+        print("[x]receive from:" + str(address))
+        th = threading.Thread(target=process_http, args=(conn,), daemon=True)
+        th.start()
