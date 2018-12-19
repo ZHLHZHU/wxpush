@@ -12,7 +12,9 @@ appID = os.getenv("APPID")
 appsecret = os.getenv("APPSECRET")
 template_id = os.getenv("TEMPLATE_ID")
 http_coding = "utf-8"
-
+http_addr = "0.0.0.0"
+http_port = 1025
+#TODO:增加读配置文件功能，抛弃dotenv
 
 def init():
     sqlite_con = sqlite3.connect("data.db")
@@ -113,10 +115,9 @@ def process_http(conn):
 
 if __name__ == "__main__":
     init()
-    # TODO:提供外部接口调用
     sk = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
     sk.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sk.bind(("0.0.0.0", 1025))
+    sk.bind((http_addr, http_port))
     sk.listen()
     while True:
         conn, address = sk.accept()
