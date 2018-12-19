@@ -17,7 +17,7 @@ http_port = config.getint("server", "port")
 
 def init():
     update_access_token()  # 第一次获取access_token
-    timer = threading.Timer(10, update_access_token)  # 每10秒更新一次access_token
+    timer = threading.Timer(120, update_access_token)  # 每10秒更新一次access_token
     timer.start()
 
 
@@ -30,7 +30,7 @@ def update_access_token():
     start_time = config.get("token", "start_time")
     remain_time = config.get("token", "remain_time")
     if access_token == "" or start_time == "" or remain_time == "" or int(
-            time.time()) > int(start_time) + int(remain_time) + 60:  # 如果access_token过期或者没有获取过
+            time.time()) > int(start_time) + int(remain_time) + 500:  # 如果access_token过期或者没有获取过
         url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s" % (
             appID, appsecret)
         r = requests.get(url)
