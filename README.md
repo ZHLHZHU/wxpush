@@ -20,7 +20,7 @@ pipenv install
 4. 把新建的测试模板的ID填入**wxpush.ini**的template_id字段中
 5. **server** section中的配置按需修改，**token** section中的配置项保持空白
 
-###　运行
+### 运行
 ```bash
 pipenv run python main.py
 ```
