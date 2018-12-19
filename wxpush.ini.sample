@@ -1,0 +1,15 @@
+[weixin]
+appid =
+appsecret =
+template_id =
+
+[server]
+ip = 0.0.0.0
+port = 1025
+http_coding = utf-8
+
+[token]
+access_token =
+start_time =
+remain_time =
+
