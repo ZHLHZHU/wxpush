@@ -24,3 +24,8 @@ pipenv install
 ```bash
 pipenv run python main.py
 ```
+发送GET请求：
+  
+http://**ip**:1025/?from=**Title**&to=**openID**&content=**text**&redirect=**url**
+* openID可在[微信测试号管理](https://mp.weixin.qq.com/debug/cgi-bin/sandboxinfo?action=showinfo&t=sandbox/index)页面-用户列表-微信号获得
+* redirect的url为点击模板消息后跳转的地址
