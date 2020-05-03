@@ -5,7 +5,7 @@ wxpush用于搭建个性化的微信消息推送平台。
 ## 安装&使用
 ### 准备环境
 ```bash
-git clone https://github.com/a22271001/wxpush.git
+git clone https://github.com/ZHLHZHU/wxpush
 cd wxpush
 pipenv install
 ```
