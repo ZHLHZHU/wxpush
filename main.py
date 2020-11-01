@@ -1,9 +1,9 @@
-import socket
+import configparser
 import threading
 import time
-from urllib.parse import unquote
+from typing import Optional
 import requests
-import configparser
+from fastapi import FastAPI, Query
 
 config = configparser.ConfigParser()
 config.read("wxpush.ini")
@@ -13,12 +13,7 @@ template_id = config.get("weixin", "TEMPLATE_ID")
 http_coding = config.get("server", "http_coding")
 http_addr = config.get("server", "ip")
 http_port = config.getint("server", "port")
-
-
-def init():
-    update_access_token()  # 第一次获取access_token
-    timer = threading.Timer(120, update_access_token)  # 每10秒更新一次access_token
-    timer.start()
+app = FastAPI()
 
 
 def update_access_token():
@@ -61,74 +56,13 @@ def push(from_, to, content, redirect):
     return r.content
 
 
-def abort(conn, code):
-    """
-    服务器错误返回
-    :param conn: socket句柄
-    :param code: http错误状态码
-    :return: None
-    """
-    if code == 501:
-        msg = "HTTP/1.0 501 Method Not Implemented\r\nContent-Type: text/html\r\n\r\n<HTML><HEAD><TITLE>Method Not Implemented</TITLE></HEAD>\r\n<BODY><P>HTTP request method not supported.</P>\r\n</BODY></HTML>\r\n"
-        conn.sendall(msg.encode(http_coding))
-        conn.close()
-
-
-def return_msg(conn, content):
-    """
-    成功推送消息后，返回微信接口返回的信息
-    :param conn: socket句柄
-    :param content: 返回消息，是一个json
-    :return: None
-    """
-    msg = "HTTP/1.1 200 OK\r\n"
-    msg += "Content-Type: text/html\r\n\r\n"
-    msg += content
-    conn.sendall(msg.encode(http_coding))
-    conn.close()
-
-
-def process_http(conn):
-    """
-    对外提供接口
-    :param conn:监听端口的socket句柄
-    :return:
-    """
-    receive_data = conn.recv(3000)  # GET方法只收2k+字节
-    request = receive_data.decode(http_coding)
-    try:
-        method = request.split(" ")[0]
-        args = request.split(" ")[1]
-    except:
-        abort(500)
-        return
-    if method != "GET":
-        abort(conn, 501)
-        return
-
-    args_dict = dict()
-    args = args[args.find("?") + 1:]  # 分离出?后面的参数
-    for arg in args.split("&"):
-        kv = arg.split("=")
-        args_dict[kv[0]] = kv[1]
-    from_ = unquote(args_dict.get("from"), http_coding)
-    to = unquote(args_dict.get("to"), http_coding)
-    content = unquote(args_dict.get("content"), http_coding)
-    redirect = unquote(args_dict.get("redirect"), http_coding)  # 从GET请求中分离出目标参数
-    if from_ and to and content:
-        return_msg(conn, push(from_, to, content,redirect).decode("utf-8"))
-    else:
-        return_msg(conn, "Parameter error!")
+@app.get("/")
+def request_push(from_: Optional[str] = Query(None, alias="from"), to_: Optional[str] = None, text: str = None,
+                 redirect: str = None):
+    return push(from_, to_, text, redirect)
 
 
 if __name__ == "__main__":
-    init()
-    sk = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-    sk.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sk.bind((http_addr, http_port))
-    sk.listen()
-    while True:
-        conn, address = sk.accept()
-        print("[x]receive from:" + str(address))
-        th = threading.Thread(target=process_http, args=(conn,), daemon=True)
-        th.start()
+    update_access_token()  # 第一次获取access_token
+    timer = threading.Timer(120, update_access_token)  # 每10秒更新一次access_token
+    timer.start()
