@@ -9,7 +9,7 @@ import uvicorn
 config = configparser.ConfigParser()
 config.read("wxpush.ini")
 appID = config.get("weixin", "APPID")
-appsecret = config.get("weixin", "APPSECRET")
+app_secret = config.get("weixin", "APPSECRET")
 template_id = config.get("weixin", "TEMPLATE_ID")
 app = FastAPI(docs_url=None, redoc_url=None)
 
@@ -24,10 +24,9 @@ def update_access_token():
     remain_time = config.get("token", "remain_time")
     if access_token == "" or start_time == "" or remain_time == "" or int(
             time.time()) > int(start_time) + int(remain_time) + 500:  # 如果access_token过期或者没有获取过
-        url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s" % (
-            appID, appsecret)
+        url = f"https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appID}&secret=${app_secret}"
         r = requests.get(url)
-        if r.json().get("errcode", "0") == "0":
+        if not r.json().has_key("errcode"):
             rjson = r.json()
             config.set("token", "access_token", rjson["access_token"])
             config.set("token", "start_time", str(int(time.time())))
@@ -44,7 +43,7 @@ def push(from_, to, content, redirect):
     :return: None
     """
     access_token = config.get("token", "access_token")
-    url = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=%s" % access_token
+    url = f"https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${access_token}"
     requests_body = {'touser': to,
                      'template_id': template_id,
                      'url': redirect, 'topcolor': '#FF0000',
@@ -61,7 +60,9 @@ def request_push(to: str, content: str, redirect: str,
 
 
 if __name__ == '__main__':
-    update_access_token()  # 第一次获取access_token
-    timer = threading.Timer(120, update_access_token)  # 每10秒更新一次access_token
+    # 第一次获取access_token
+    update_access_token()
+    # 每10秒更新一次access_token
+    timer = threading.Timer(120, update_access_token)
     timer.start()
     uvicorn.run(app, host="0.0.0.0", port=1025, log_level="info")
