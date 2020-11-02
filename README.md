@@ -11,7 +11,7 @@ pipenv install
 ```
 ### 配置文件
 1. 把**wxpush.ini.sample**改名为**wxpush.ini**
-2. 在[微信测试号管理](https://mp.weixin.qq.com/debug/cgi-bin/sandboxinfo?action=showinfo&t=sandbox/index)页面获得appid和appsecret，并填入wxpush.ini中
+2. 在[微信测试号管理](https://mp.weixin.qq.com/debug/cgi-bin/sandboxinfo?action=showinfo&t=sandbox/index) 页面获得appid和appsecret，并填入wxpush.ini中
 3. 创建一个测试模板，模板标题随意，在模板内容中填入:
 ```
 {{from.DATA}}：

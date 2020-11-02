@@ -4,16 +4,14 @@ import time
 from typing import Optional
 import requests
 from fastapi import FastAPI, Query
+import uvicorn
 
 config = configparser.ConfigParser()
 config.read("wxpush.ini")
 appID = config.get("weixin", "APPID")
 appsecret = config.get("weixin", "APPSECRET")
 template_id = config.get("weixin", "TEMPLATE_ID")
-http_coding = config.get("server", "http_coding")
-http_addr = config.get("server", "ip")
-http_port = config.getint("server", "port")
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None)
 
 
 def update_access_token():
@@ -57,12 +55,13 @@ def push(from_, to, content, redirect):
 
 
 @app.get("/")
-def request_push(from_: Optional[str] = Query(None, alias="from"), to_: Optional[str] = None, text: str = None,
-                 redirect: str = None):
-    return push(from_, to_, text, redirect)
+def request_push(to: str, content: str, redirect: str,
+                 from_: Optional[str] = Query(None, alias="from")):
+    return push(from_, to, content, redirect)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     update_access_token()  # 第一次获取access_token
     timer = threading.Timer(120, update_access_token)  # 每10秒更新一次access_token
     timer.start()
+    uvicorn.run(app, host="0.0.0.0", port=1025, log_level="info")
